@@ -4,12 +4,12 @@ import urequests as request
 import uasyncio as asyncio
 
 flex_sensor = ADC(Pin(27))
-motor = PWM(Pin(15, Pin.OUT))
+motor = PWM(Pin(14))
 
 motor.freq(1000)
 PWM_DUTY_OFF = 0
-PWM_DUTY_LOW = 16256
-PWM_DUTY_MED = 48,767
+PWM_DUTY_LOW = 32767    
+PWM_DUTY_MED = 48767
 PWM_DUTY_HIGH = 65025
 
 test_led = Pin("LED", Pin.OUT)
@@ -23,7 +23,7 @@ DEVICE_ID = 1
 connected = False
 
 flex_sensitvitity = 1000 # get local settings
-vibration_duration = 1000
+vibration_duration = 10000
 vibration_strength = 1 # 0|1|2
 
 async def get_settings():
@@ -37,10 +37,12 @@ async def update_settings():
     global connected
     global flex_sensitvitity
     global vibration_duration
+    global vibration_strength
     while connected:
         try:
             settings = await get_settings()
             flex_sensitvitity = int(settings["flex_sensitivity"])
+            vibration_strength = int(settings["vibration_strength"])
             vibration_duration = int(settings["vibration_duration"])
         except:
             await asyncio.sleep(5)
@@ -69,13 +71,13 @@ async def work():
         flex = flex_sensor.read_u16()
         print(flex)
         if flex > flex_sensitvitity:
-            match vibration_strength:
-                case 0:
-                    motor.duty_u16(PWM_DUTY_LOW)
-                case 1:
-                    motor.duty_u16(PWM_DUTY_MED)
-                case 2:
-                    motor.duty_u16(PWM_DUTY_HIGH)
+            if vibration_strength == 0:
+                motor.duty_u16(PWM_DUTY_LOW)
+            elif vibration_strength == 1:
+                print(PWM_DUTY_MED)
+                motor.duty_u16(PWM_DUTY_MED)
+            elif vibration_strength == 2:
+                motor.duty_u16(PWM_DUTY_HIGH)
             await asyncio.sleep_ms(vibration_duration)
             motor.duty_u16(PWM_DUTY_OFF)
         else:
@@ -87,5 +89,21 @@ async def main():
     connect_task = asyncio.create_task(connect())
     await asyncio.get_event_loop().run_until_complete(asyncio.gather(work_task, connect_task))
 
+
+# async def cycle_strengths():
+#     global vibration_strength
+#     while True:
+#         vibration_strength = 0
+#         print("0")
+#         motor.duty_u16(PWM_DUTY_LOW)
+#         await asyncio.sleep(5)
+#         vibration_strength = 1
+#         print("1")
+#         motor.duty_u16(PWM_DUTY_MED)
+#         await asyncio.sleep(5)
+#         print("2")
+#         vibration_strength = 2
+#         motor.duty_u16(PWM_DUTY_HIGH)
+#         await asyncio.sleep(5)
 
 asyncio.run(main())
