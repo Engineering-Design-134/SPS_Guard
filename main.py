@@ -8,8 +8,8 @@ motor = PWM(Pin(14))
 
 motor.freq(1000)
 PWM_DUTY_OFF = 0
-PWM_DUTY_LOW = 32767    
-PWM_DUTY_MED = 48767
+PWM_DUTY_LOW = 50767
+PWM_DUTY_MED = 58767
 PWM_DUTY_HIGH = 65025
 
 test_led = Pin("LED", Pin.OUT)
@@ -23,7 +23,7 @@ DEVICE_ID = 1
 connected = False
 
 flex_sensitvitity = 1000 # get local settings
-vibration_duration = 10000
+vibration_duration = 1000
 vibration_strength = 1 # 0|1|2
 
 async def get_settings():
