@@ -1,5 +1,6 @@
 from machine import Pin, ADC, PWM
 import network
+from time import sleep
 import urequests as request
 import uasyncio as asyncio
 
@@ -12,8 +13,8 @@ PWM_DUTY_LOW = 50767
 PWM_DUTY_MED = 58767
 PWM_DUTY_HIGH = 65025
 
-test_led = Pin("LED", Pin.OUT)
-test_led.on()
+test_led = Pin(13, Pin.OUT)
+test_led.off()
 
 API = "http://sps-api-ce9301a647f2.herokuapp.com"
 SSID = "Jason"
@@ -24,7 +25,7 @@ connected = False
 
 flex_sensitvitity = 1000 # get local settings
 vibration_duration = 1000
-vibration_strength = 1 # 0|1|2
+vibration_strength = 2 # 0|1|2
 
 async def get_settings():
     url = API + f"/settings?device_id={DEVICE_ID}"
@@ -33,36 +34,44 @@ async def get_settings():
     json = response.json()
     return json
 
-async def update_settings():
+async def update_settings(wlan):
     global connected
     global flex_sensitvitity
     global vibration_duration
     global vibration_strength
+    if wlan.isconnected() == False:
+        return
     while connected:
         try:
             settings = await get_settings()
+            print(settings)
             flex_sensitvitity = int(settings["flex_sensitivity"])
             vibration_strength = int(settings["vibration_strength"])
             vibration_duration = int(settings["vibration_duration"])
         except:
-            await asyncio.sleep(5)
             return
-        await asyncio.sleep(5)
+        await asyncio.sleep(3)
 
 async def connect():
     global flex_sensitvitity
     global connected
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
+    wlan.connect(SSID, PASSWORD)
+    print('Waiting for connection...')
+    await asyncio.sleep(5)
     while True:
+        # 10 tries before retrying
+        for _ in range(10):
+            print("Waiting for connection...")
+            await asyncio.sleep(2)
+            if wlan.isconnected():
+                print('Connected to network')
+                connected = True
+                await asyncio.create_task(update_settings(wlan))
+                connected = False
         wlan.connect(SSID, PASSWORD)
-        print('Waiting for connection...')
-        await asyncio.sleep(3)
-        if wlan.isconnected():
-            print('Connected to network')
-            connected = True
-            await asyncio.create_task(update_settings())
-            connected = False
+        
 
 async def work():
     global motor
@@ -71,6 +80,7 @@ async def work():
         flex = flex_sensor.read_u16()
         print(flex)
         if flex > flex_sensitvitity:
+            test_led.on()
             if vibration_strength == 0:
                 motor.duty_u16(PWM_DUTY_LOW)
             elif vibration_strength == 1:
@@ -80,7 +90,9 @@ async def work():
                 motor.duty_u16(PWM_DUTY_HIGH)
             await asyncio.sleep_ms(vibration_duration)
             motor.duty_u16(PWM_DUTY_OFF)
+            test_led.off()
         else:
+            test_led.off()
             motor.duty_u16(PWM_DUTY_OFF)
         await asyncio.sleep(1)
 
