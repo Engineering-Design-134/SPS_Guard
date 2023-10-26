@@ -13,8 +13,8 @@ PWM_DUTY_LOW = 50767
 PWM_DUTY_MED = 58767
 PWM_DUTY_HIGH = 65025
 
-test_led = Pin(13, Pin.OUT)
-test_led.off()
+test_led = PWM(Pin(13))
+test_led.duty_u16(PWM_DUTY_OFF)
 
 API = "http://sps-api-ce9301a647f2.herokuapp.com"
 SSID = "Jason"
@@ -80,19 +80,21 @@ async def work():
         flex = flex_sensor.read_u16()
         print(flex)
         if flex > flex_sensitvitity:
-            test_led.on()
             if vibration_strength == 0:
                 motor.duty_u16(PWM_DUTY_LOW)
+                test_led.duty_u16(int(PWM_DUTY_LOW / 4))
             elif vibration_strength == 1:
                 print(PWM_DUTY_MED)
                 motor.duty_u16(PWM_DUTY_MED)
+                test_led.duty_u16(int(PWM_DUTY_MED / 2))
             elif vibration_strength == 2:
                 motor.duty_u16(PWM_DUTY_HIGH)
+                test_led.duty_u16(PWM_DUTY_HIGH)
             await asyncio.sleep_ms(vibration_duration)
             motor.duty_u16(PWM_DUTY_OFF)
-            test_led.off()
+            test_led.duty_u16(PWM_DUTY_OFF)
         else:
-            test_led.off()
+            test_led.duty_u16(PWM_DUTY_OFF)
             motor.duty_u16(PWM_DUTY_OFF)
         await asyncio.sleep(1)
 
